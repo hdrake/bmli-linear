@@ -1,12 +1,14 @@
 import numpy as np
+import scipy
 import dedalus.public as d3
 
 N = 1.e-3 # buoyancy frequency
 f = 5.e-5 # Coriolis parameter
 θ = 2.e-3 # slope angle
 
-Hbml = 300.
-M = 4.0e-5
+Hbfz = 300. # thickness of bottom frontal zone
+M = 4.0e-5 # strength of bottom front
+δz = 25. # interface smoothing scale
 
 κ0 = 5.e-5 # background diffusivity
 κ1 = 5.e-3 # bottom enhancement of diffusivity
@@ -14,32 +16,36 @@ h = 250. # decay scale of mixing
 σ = 1 # Prandtl number
 
 H = 1500. # domain height
-nz=128
+nz = 128 # number of Chebyshev modes for EVP
 
-def bottom_frontal_zone_basic(z, M, Hbml=300., θ=2.e-3, f=5.e-5):
+def sigmoid(z, z0=Hbfz, δz=δz):
+    return (scipy.special.erf(np.sqrt(np.pi)/2. * -(z-z0)/ δz ) + 1.)/2.
+
+def sigmoid_int(z, z0=Hbfz, δz=δz):
+    return ( (z-z0)*(scipy.special.erf(np.sqrt(np.pi)/2. * -(z-z0)/ δz ) + 1.) - 2/np.pi*δz*np.exp(-np.pi*(z-z0)**2/(2*δz)**2) )/2.
+
+def bottom_frontal_zone_basic(z, M, Hbfz=Hbfz, θ=θ, f=f, δz=δz):
     B = np.zeros_like(z)
     U = np.zeros_like(z)
     V = np.zeros_like(z)
     
-    idx = z < Hbml
-    B[idx] = - M**2 * (z[idx] - Hbml) / np.sin(θ)
-    V[idx] = M**2 * (z[idx] - Hbml) / (f * np.cos(θ))
+    B = -M**2/np.sin(θ) * sigmoid_int(z, z0=Hbfz, δz=δz)
+    V =  M**2 / (f * np.cos(θ)) * sigmoid_int(z, z0=Hbfz, δz=δz)
     V -= np.min(V)
     
     return B, U, V
     
 def bottom_frontal_zone_instability(
-        k, l, M, Hbml=Hbml,
+        k, l, M, Hbfz=Hbfz,
         θ=θ, f=f,
         κ0=κ0, κ1=κ1, h=h, σ=σ,
-        nz=nz, H=H,
+        nz=nz, H=H, δz=δz
     ):
     
     ## Coordinates and basis
     zcoord = d3.Coordinate('z')
     dist = d3.Distributor(zcoord, dtype=np.complex128)
 
-    nz = 128 # number of grid points
     zbasis = d3.Chebyshev(zcoord, size=nz, bounds=(0, H), dealias=3/2)
     
     ## Fields
@@ -54,7 +60,7 @@ def bottom_frontal_zone_instability(
     κ['g'] = κ0 + κ1*np.exp(-z/h) # slope-normal diffusivity
     
     # basic state
-    B['g'], U['g'], V['g'] = bottom_frontal_zone_basic(z, M, Hbml=Hbml, θ=θ, f=f)
+    B['g'], U['g'], V['g'] = bottom_frontal_zone_basic(z, M, Hbfz=Hbfz, θ=θ, f=f, δz=δz)
     
     # boundary conditions (tau method)
     τ_B = dist.Field(name="τ_B")
@@ -182,3 +188,4 @@ def bottom_frontal_zone_instability(
         'B':B, 'U':U, 'V':V, 'Bz':Bz, 'Uz':Uz, 'Vz':Vz, 'κ':κ, 'z':z,
         'problem':problem, 'solver':solver,
     }
+
