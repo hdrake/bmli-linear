@@ -19,7 +19,7 @@ f = 5.e-5 # Coriolis parameter
 
 Hbfz = 300. # thickness of bottom frontal zone
 M = 4.0e-5 # strength of bottom front
-δz = 25. # interface smoothing scale
+δz = 30. # interface smoothing scale
 
 κ0 = 5.e-5 # background diffusivity
 κ1 = 5.e-3 # bottom enhancement of diffusivity
@@ -27,7 +27,7 @@ h = 250. # decay scale of mixing
 σ = 1 # Prandtl number
 
 H = 1500. # domain height
-nz = 200 # number of Chebyshev modes for EVP
+nz = 180 # number of Chebyshev modes for EVP
 
 def calc_Mc(N, θ):
     return N*np.sqrt(np.sin(θ))
@@ -35,7 +35,7 @@ def calc_Mc(N, θ):
 def calc_m_from_M(M, Mc):
     return M/(Mc-M)
 
-def calc_M_from_m(M, Mc):
+def calc_M_from_m(m, Mc):
     return Mc*(m/(1+m))
 
 def calc_M_from_Ri(Ri, N, f, θ):
