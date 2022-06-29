@@ -2,6 +2,17 @@ import numpy as np
 import scipy
 import dedalus.public as d3
 
+import os, sys
+
+class HiddenPrints:
+    def __enter__(self):
+        self._original_stdout = sys.stdout
+        sys.stdout = open(os.devnull, 'w')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout.close()
+        sys.stdout = self._original_stdout
+
 N = 1.e-3 # buoyancy frequency
 f = 5.e-5 # Coriolis parameter
 θ = 2.e-3 # slope angle
@@ -16,7 +27,28 @@ h = 250. # decay scale of mixing
 σ = 1 # Prandtl number
 
 H = 1500. # domain height
-nz = 128 # number of Chebyshev modes for EVP
+nz = 200 # number of Chebyshev modes for EVP
+
+def calc_Mc(N, θ):
+    return N*np.sqrt(np.sin(θ))
+    
+def calc_m_from_M(M, Mc):
+    return M/(Mc-M)
+
+def calc_M_from_m(M, Mc):
+    return Mc*(m/(1+m))
+
+def calc_M_from_Ri(Ri, N, f, θ):
+    return np.sqrt(
+        (-f**2*np.tan(θ)**-1 + np.sqrt(f**4*np.tan(θ)**-2 + 4*Ri*f**2*N**2))
+        / (2*Ri)
+    )
+
+def calc_Ri(N, M, θ, f):
+    Bzv = N**2 - M**2*np.tan(θ)**-1
+    Bxh = M**2
+    Vzv = Bxh/f
+    return Bzv/(Vzv**2)
 
 def sigmoid(z, z0=Hbfz, δz=δz):
     return (scipy.special.erf(np.sqrt(np.pi)/2. * -(z-z0)/ δz ) + 1.)/2.
@@ -40,7 +72,8 @@ def bottom_frontal_zone_instability(
         θ=θ, f=f,
         κ0=κ0, κ1=κ1, h=h, σ=σ,
         nz=nz, H=H, δz=δz,
-        νh=0., νh4=0., κh=0., κh4=0.
+        νh=0., ν4=0., κh=0., κ4=0.,
+        nh=0.
     ):
     
     ## Coordinates and basis
@@ -137,24 +170,27 @@ def bottom_frontal_zone_instability(
     problem.add_equation(# Cross-slope momentum
         'dt(u) + w*dz(U) + U*dx(u) + V*dy(u) - f*v*cosθ + dx(p)'
         '- b*sinθ - σ*dz(κ*uz)'
-        '- νh*( dx(dx(u)) + dy(dy(u)) ) + νh4*( dx(dx(dx(dx(u)))) + dy(dy(dy(dy(u)))) )'
+        '- νh*( dx(dx(u)) + dy(dy(u)) )'
+        '+ ν4*( dx(dx(dx(dx(u)))) + 2*dx(dx(dy(dy(u)))) + dy(dy(dy(dy(u)))) )'
         '+ lift(τ_u) = 0'
     )
     problem.add_equation((# Along-slope momentum
         'dt(v) + w*dz(V) + U*dx(v) + V*dy(v) + f*(u*cosθ - w*sinθ) + dy(p)'
         '- σ*dz(κ*vz)'
-        '- νh*( dx(dx(v)) + dy(dy(v)) ) + νh4*( dx(dx(dx(dx(v)))) + dy(dy(dy(dy(v)))) )'
+        '- νh*( dx(dx(v)) + dy(dy(v)) )'
+        '+ ν4*( dx(dx(dx(dx(v)))) + 2*dx(dx(dy(dy(v)))) + dy(dy(dy(dy(v)))) )'
         '+ lift(τ_v) = 0'
     ))
     problem.add_equation((# Slope-normal momentum
-        'dt(w) + U*dx(w) + V*dy(w) + f*v*sinθ + dz(p)'
-        '- b*cosθ - σ*dz(κ*wz)'
+        'nh*(dt(w) + U*dx(w) + V*dy(w) + f*v*sinθ - σ*dz(κ*wz))'
+        '+ dz(p) - b*cosθ '
         '+ lift(τ_w) = 0'
     ))
     problem.add_equation((# Buoyancy
         'dt(b) + u*N2*sinθ + w*N2*cosθ + w*dz(B) + U*dx(b) + V*dy(b)'
         '- dz(κ*bz)'
-        '- κh*( dx(dx(b)) + dy(dy(b)) ) + κh4*( dx(dx(dx(dx(b)))) + dy(dy(dy(dy(b)))) )'
+        '- κh*( dx(dx(b)) + dy(dy(b)) )'
+        '+ κ4*( dx(dx(dx(dx(b)))) + 2*dx(dx(dy(dy(b)))) + dy(dy(dy(dy(b)))) )'
         '+ lift(τ_b) = 0'
     ))
     problem.add_equation('dx(u) + dy(v) + wz = 0')
@@ -173,7 +209,7 @@ def bottom_frontal_zone_instability(
     solver = problem.build_solver(ncc_cutoff=1e-10, entry_cutoff=0)
 
     # solve the EVP
-    solver.solve_dense(solver.subproblems[0])
+    solver.solve_dense(solver.subproblems[0], rebuild_coeffs=True)
 
     # sort eigenvalues
     omega = np.copy(solver.eigenvalues)
