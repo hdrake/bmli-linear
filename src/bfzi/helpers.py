@@ -55,7 +55,7 @@ def calc_Ld(N, H, f, Ri):
     return (N*H/f) * np.sqrt(1. + 1./Ri)
 
 def calc_td(f, Ri):
-    return 1. /(f * np.sqrt( (1. + Ri)**-1 ) )
+    return np.sqrt(54. / 5.) *  /(f / np.sqrt( (1. + Ri) ) )
 
 def Houter(h, k1, k0): return h*np.log(k1/k0)
 
