@@ -1,6 +1,8 @@
 import dedalus.public as d3
 from .helpers import *
 
+nz = 180 # number of Chebyshev modes for EVP
+
 def bottom_frontal_zone_instability(
         k, l, M, Hbfz=Hbfz,
         θ=θ, f=f,
