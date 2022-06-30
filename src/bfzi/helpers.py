@@ -32,6 +32,9 @@ H = 1500. # domain height
 
 def calc_Mc(N, θ):
     return N*np.sqrt(np.sin(θ))
+
+def calc_Nbfz(N, M, θ):
+    return np.sqrt(N**2 - M**2/np.tan(θ))
     
 def calc_m_from_M(M, Mc):
     return M/(Mc-M)
@@ -53,6 +56,9 @@ def calc_Ri(N, M, θ, f):
 
 def calc_Ld(N, H, f, Ri):
     return (N*H/f) * np.sqrt(1. + 1./Ri)
+
+def calc_Lmax(N, H, f, Ri):
+    return 3.9*calc_Ld(N, H, f, Ri)
 
 def calc_td(f, Ri):
     return np.sqrt(54. / 5.) * np.sqrt( (1. + Ri) ) / np.abs(f)
