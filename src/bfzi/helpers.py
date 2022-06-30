@@ -37,16 +37,16 @@ def calc_m_from_M(M, Mc):
     return M/(Mc-M)
 
 def calc_M_from_m(m, Mc):
-    return Mc*(m/(1+m))
+    return Mc*(m/(1. +m))
 
 def calc_M_from_Ri(Ri, N, f, θ):
     return np.sqrt(
-        (-f**2*np.tan(θ)**-1 + np.sqrt(f**4*np.tan(θ)**-2 + 4*Ri*f**2*N**2))
+        (-f**2*np.tan(θ)**(-1) + np.sqrt(f**4*np.tan(θ)**(-2) + 4*Ri*f**2*N**2))
         / (2*Ri)
     )
 
 def calc_Ri(N, M, θ, f):
-    Bzv = N**2 - M**2*np.tan(θ)**-1
+    Bzv = N**2 - M**2*np.tan(θ)**(-1)
     Bxh = M**2
     Vzv = Bxh/f
     return Bzv/(Vzv**2)
@@ -55,7 +55,7 @@ def calc_Ld(N, H, f, Ri):
     return (N*H/f) * np.sqrt(1. + 1./Ri)
 
 def calc_td(f, Ri):
-    return np.sqrt(54. / 5.) *  /(f / np.sqrt( (1. + Ri) ) )
+    return np.sqrt(54. / 5.) * np.sqrt( (1. + Ri) ) / np.abs(f)
 
 def Houter(h, k1, k0): return h*np.log(k1/k0)
 
