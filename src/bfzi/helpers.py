@@ -21,7 +21,7 @@ g = 9.81 # gravitation acceleration
 
 Hbfz = 300. # thickness of bottom frontal zone
 M = 4.0e-5 # strength of bottom front
-δz = 30. # interface smoothing scale
+δz = 25. # interface smoothing scale
 
 κ0 = 5.e-5 # background diffusivity
 κ1 = 5.e-3 # bottom enhancement of diffusivity
